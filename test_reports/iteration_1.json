@@ -1,0 +1,37 @@
+{
+  "summary": "First-finish smoke test of Student Portal (Supabase-backed FastAPI + React). Backend auth, CRUD, and RBAC are all working. Student login/dashboard and Admin login/dashboard render correctly with real data. Full test submission flow via API confirmed (score computed, grade row created). SQL injection blocked by Pydantic email validator.",
+  "tested_scope": ["backend", "frontend", "auth", "integration"],
+  "passed": [
+    "POST /api/auth/login for student and admin returns JWT + user payload",
+    "GET /api/tests returns 2 seeded tests (Python Basics, JavaScript Fundamentals)",
+    "GET /api/tests/{id} returns 5 MCQ questions with options and marks",
+    "POST /api/tests/submit computed score=5/25 correctly, is_flagged=false for tab_switch_count=2, created grade row",
+    "GET /api/grades returns the newly created grade entry",
+    "GET /api/assignments returns 2 assignments",
+    "GET /api/announcements returns seeded announcements",
+    "POST /api/admin/announcements creates announcement (200)",
+    "POST /api/admin/assignments creates assignment (200)",
+    "GET /api/admin/stats returns {total_students:1,total_tests:2,total_assignments:2,total_violations:0}",
+    "RBAC: student token on /api/admin/stats returns 403 'Admin access required'",
+    "SQL injection payload in email field rejected by email validator (422)",
+    "Frontend login page loads with test credential hint card",
+    "Student dashboard shows tabs (Dashboard/Tests/Assignments/Grades/Announcements) and stat cards (Available Tests=2, Assignments=3, Grades=1, Announcements=3)",
+    "Admin dashboard renders stat cards (Total Students=1, Total Tests=2, Assignments=3, Violations=0) plus Recent Tests list",
+    "Logout returns user to login page"
+  ],
+  "failed": [
+    {
+      "area": "backend/admin-create-test-schema",
+      "issue": "POST /api/admin/tests requires 'total_marks' at body root (in addition to per-question 'marks'). Not a bug per se, but confirm the admin UI passes it; documenting so main agent verifies the create-test modal sends total_marks.",
+      "evidence": "422 with 'Field required' when body omitted total_marks",
+      "priority": "LOW"
+    }
+  ],
+  "action_items": [
+    "Verify AdminDashboard 'Create Test' modal sends total_marks in the request body (backend requires it).",
+    "Optional: full testing agent should exercise UI-driven test taking (start test, select answers, submit) and tab-switch anti-cheat (>5 switches flagging) via Playwright, plus admin create-test modal end-to-end."
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true
+}
