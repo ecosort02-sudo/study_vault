@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { tests } from '../lib/api';
 import { AlertTriangle, Clock, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import Logo from '../components/Logo';
 
 const TestPage = () => {
   const { testId } = useParams();
@@ -174,9 +175,13 @@ const TestPage = () => {
       <div className={`relative z-10 border-b border-[#27272a] bg-[#18181b]/80 backdrop-blur-xl ${tabSwitchCount > 0 ? 'mt-14' : ''}`}>
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight" data-testid="test-title">{test.title}</h1>
-              <p className="text-sm text-[#a1a1aa]">Total Marks: {test.total_marks}</p>
+            <div className="flex items-center gap-6">
+              <Logo size="md" />
+              <div className="hidden md:block h-8 w-px bg-[#27272a]"></div>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight" data-testid="test-title">{test.title}</h1>
+                <p className="text-sm text-[#a1a1aa]">Total Marks: {test.total_marks}</p>
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 px-4 py-2 bg-[#09090b] border border-[#27272a] rounded-md">

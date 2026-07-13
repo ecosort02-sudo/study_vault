@@ -16,7 +16,6 @@ api.interceptors.request.use((config) => {
 
 export const auth = {
   login: (email, password) => api.post('/auth/login', { email, password }),
-  register: (email, password, full_name, role) => api.post('/auth/register', { email, password, full_name, role }),
   getMe: () => api.get('/auth/me'),
 };
 
@@ -28,6 +27,7 @@ export const tests = {
 
 export const assignments = {
   getAll: () => api.get('/assignments'),
+  submit: (data) => api.post('/assignments/submit', data),
 };
 
 export const grades = {
@@ -41,11 +41,15 @@ export const announcements = {
 export const admin = {
   createTest: (data) => api.post('/admin/tests', data),
   getAllTests: () => api.get('/admin/tests'),
+  publishTest: (id) => api.post(`/admin/tests/${id}/publish`),
+  unpublishTest: (id) => api.post(`/admin/tests/${id}/unpublish`),
   createAssignment: (data) => api.post('/admin/assignments', data),
   getAllAssignments: () => api.get('/admin/assignments'),
   createAnnouncement: (data) => api.post('/admin/announcements', data),
   getViolations: () => api.get('/admin/violations'),
   getStats: () => api.get('/admin/stats'),
+  createUser: (data) => api.post('/admin/users', data),
+  listUsers: () => api.get('/admin/users'),
 };
 
 export default api;

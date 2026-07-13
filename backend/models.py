@@ -31,6 +31,9 @@ class Test(Base):
     duration_minutes = Column(Integer, default=60)
     total_marks = Column(Integer, nullable=False)
     is_active = Column(Boolean, default=True, index=True)
+    starts_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    ends_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    results_published = Column(Boolean, default=False, index=True)
     created_by = Column(String(36), nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     
@@ -46,6 +49,8 @@ class Assignment(Base):
     due_date = Column(DateTime(timezone=True))
     total_marks = Column(Integer, nullable=False)
     is_active = Column(Boolean, default=True, index=True)
+    starts_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    ends_at = Column(DateTime(timezone=True), nullable=True, index=True)
     created_by = Column(String(36), nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
@@ -75,6 +80,7 @@ class Grade(Base):
     title = Column(String(255), nullable=False)
     score = Column(Integer, nullable=False)
     total_marks = Column(Integer, nullable=False)
+    is_published = Column(Boolean, default=False, index=True)
     graded_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     
     # Relationships
@@ -89,3 +95,12 @@ class Announcement(Base):
     created_by = Column(String(36), nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
     is_active = Column(Boolean, default=True, index=True)
+
+class AssignmentSubmission(Base):
+    __tablename__ = 'assignment_submissions'
+    
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    assignment_id = Column(String(36), ForeignKey('assignments.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = Column(String(36), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    content = Column(Text, nullable=False)
+    submitted_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

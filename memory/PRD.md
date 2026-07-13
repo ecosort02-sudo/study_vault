@@ -53,6 +53,21 @@ Build a portal for students with:
 - ✅ SQL injection blocked at Pydantic input validation layer
 - ✅ RBAC enforced on all admin endpoints (403 for non-admins)
 
+## Update (Feb 2026 - Post first-finish additions)
+- ✅ **StudyVault branding** across every page (logo + gradient text)
+- ✅ **Admin-only account creation** — `/api/auth/register` removed; new `POST /api/admin/users` requires admin JWT
+- ✅ **Users tab in admin** with Create User modal (choose student/admin role)
+- ✅ **One-time attempts**:
+  - Tests: unique per (test_id, user_id); attempted tests show a lock and disabled "Already Attempted" button
+  - Assignments: new `assignment_submissions` table; students see "Submitted" badge and locked button after submission
+- ✅ **Admin scheduling** with `starts_at` / `ends_at` on tests and assignments — students only see items inside the availability window
+- ✅ **Publish/Unpublish results**:
+  - Grades created with `is_published=false` by default
+  - Admin toggles per-test with `/api/admin/tests/{id}/publish` and `/unpublish`
+  - `GET /api/grades` only returns published grades
+- ✅ **Percentile** displayed on grades table — computed from all submissions for the same test
+- ✅ **Assignment text submission** endpoint (`POST /api/assignments/submit`)
+
 ## Test Credentials
 - Admin: admin@portal.com / admin123
 - Student: student@portal.com / student123

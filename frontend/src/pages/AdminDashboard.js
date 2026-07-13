@@ -13,8 +13,12 @@ import {
   Users,
   ClipboardList,
   TrendingUp,
+  Eye,
+  EyeOff,
+  UserPlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import Logo from '../components/Logo';
 
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
@@ -24,10 +28,12 @@ const AdminDashboard = () => {
   const [tests, setTests] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [violations, setViolations] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateTest, setShowCreateTest] = useState(false);
   const [showCreateAssignment, setShowCreateAssignment] = useState(false);
   const [showCreateAnnouncement, setShowCreateAnnouncement] = useState(false);
+  const [showCreateUser, setShowCreateUser] = useState(false);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -39,17 +45,19 @@ const AdminDashboard = () => {
 
   const loadData = async () => {
     try {
-      const [statsRes, testsRes, assignmentsRes, violationsRes] = await Promise.all([
+      const [statsRes, testsRes, assignmentsRes, violationsRes, usersRes] = await Promise.all([
         admin.getStats(),
         admin.getAllTests(),
         admin.getAllAssignments(),
         admin.getViolations(),
+        admin.listUsers(),
       ]);
 
       setStats(statsRes.data);
       setTests(testsRes.data);
       setAssignments(assignmentsRes.data);
       setViolations(violationsRes.data);
+      setUsers(usersRes.data);
     } catch (error) {
       toast.error('Failed to load data');
     } finally {
@@ -70,9 +78,12 @@ const AdminDashboard = () => {
       {/* Header */}
       <header className="relative z-10 border-b border-[#27272a] bg-[#18181b]/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">Admin Dashboard</h1>
-            <p className="text-sm text-[#a1a1aa]">Welcome, {user?.full_name}</p>
+          <div className="flex items-center gap-6">
+            <Logo size="md" />
+            <div className="hidden md:block h-8 w-px bg-[#27272a]"></div>
+            <div className="hidden md:block">
+              <p className="text-sm text-[#a1a1aa]">Admin • {user?.full_name}</p>
+            </div>
           </div>
           <button
             onClick={handleLogout}
@@ -94,6 +105,7 @@ const AdminDashboard = () => {
               { id: 'tests', label: 'Tests', icon: BookOpen },
               { id: 'assignments', label: 'Assignments', icon: FileText },
               { id: 'announcements', label: 'Announcements', icon: Bell },
+              { id: 'users', label: 'Users', icon: Users },
               { id: 'violations', label: 'Violations', icon: AlertTriangle },
             ].map((tab) => {
               const Icon = tab.icon;
@@ -236,20 +248,60 @@ const AdminDashboard = () => {
                         <h3 className="text-lg font-semibold">{test.title}</h3>
                         <span
                           className={`px-3 py-1 rounded-full text-xs ${
-                            test.is_active
+                            test.results_published
                               ? 'bg-[#00ff66]/20 text-[#00ff66]'
                               : 'bg-[#a1a1aa]/20 text-[#a1a1aa]'
                           }`}
                         >
-                          {test.is_active ? 'Active' : 'Inactive'}
+                          {test.results_published ? 'Results Published' : 'Results Hidden'}
                         </span>
                       </div>
                       <p className="text-sm text-[#a1a1aa] mb-4">{test.description}</p>
-                      <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center justify-between text-sm mb-4">
                         <span className="text-[#a1a1aa]">{test.questions.length} questions</span>
                         <span className="text-[#a1a1aa]">{test.total_marks} marks</span>
                         <span className="text-[#a1a1aa]">{test.duration_minutes} mins</span>
                       </div>
+                      {(test.starts_at || test.ends_at) && (
+                        <div className="text-xs text-[#a1a1aa] mb-4 space-y-1">
+                          {test.starts_at && <div>Starts: {new Date(test.starts_at).toLocaleString()}</div>}
+                          {test.ends_at && <div>Ends: {new Date(test.ends_at).toLocaleString()}</div>}
+                        </div>
+                      )}
+                      <button
+                        onClick={async () => {
+                          try {
+                            if (test.results_published) {
+                              await admin.unpublishTest(test.id);
+                              toast.success('Results hidden from students');
+                            } else {
+                              await admin.publishTest(test.id);
+                              toast.success('Results published to students');
+                            }
+                            loadData();
+                          } catch (error) {
+                            toast.error('Failed to update publish status');
+                          }
+                        }}
+                        data-testid={`toggle-publish-${test.id}`}
+                        className={`w-full py-2 rounded-md text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
+                          test.results_published
+                            ? 'bg-[#27272a] hover:bg-[#3f3f46] text-white'
+                            : 'bg-gradient-to-r from-[#00f0ff] to-[#7c3aed] text-white'
+                        }`}
+                      >
+                        {test.results_published ? (
+                          <>
+                            <EyeOff className="w-4 h-4" />
+                            Unpublish Results
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="w-4 h-4" />
+                            Publish Results
+                          </>
+                        )}
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -308,6 +360,64 @@ const AdminDashboard = () => {
                     Create Announcement
                   </button>
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'users' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold flex items-center gap-2">
+                    <Users className="w-7 h-7 text-[#00f0ff]" />
+                    Manage Users
+                  </h2>
+                  <button
+                    onClick={() => setShowCreateUser(true)}
+                    data-testid="create-user-button"
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#00f0ff] to-[#7c3aed] text-white font-semibold rounded-md hover:shadow-lg transition-all"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Create User
+                  </button>
+                </div>
+
+                {users.length === 0 ? (
+                  <div className="text-center py-12 text-[#a1a1aa]">No users yet</div>
+                ) : (
+                  <div className="bg-[#18181b] border border-[#27272a] rounded-lg overflow-hidden">
+                    <table className="w-full" data-testid="users-table">
+                      <thead className="bg-[#09090b] border-b border-[#27272a]">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase">Name</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase">Email</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase">Role</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase">Joined</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#27272a]">
+                        {users.map((u) => (
+                          <tr key={u.id} data-testid={`user-row-${u.id}`} className="hover:bg-[#09090b]/50">
+                            <td className="px-6 py-4 font-medium">{u.full_name}</td>
+                            <td className="px-6 py-4 text-sm text-[#a1a1aa]">{u.email}</td>
+                            <td className="px-6 py-4">
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs ${
+                                  u.role === 'admin'
+                                    ? 'bg-[#7c3aed]/20 text-[#7c3aed]'
+                                    : 'bg-[#00f0ff]/20 text-[#00f0ff]'
+                                }`}
+                              >
+                                {u.role}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-[#a1a1aa]">
+                              {new Date(u.created_at).toLocaleDateString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
 
@@ -383,6 +493,117 @@ const AdminDashboard = () => {
       {showCreateAnnouncement && (
         <CreateAnnouncementModal onClose={() => setShowCreateAnnouncement(false)} onSuccess={loadData} />
       )}
+      {showCreateUser && (
+        <CreateUserModal onClose={() => setShowCreateUser(false)} onSuccess={loadData} />
+      )}
+    </div>
+  );
+};
+
+// Create User Modal
+const CreateUserModal = ({ onClose, onSuccess }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [role, setRole] = useState('student');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await admin.createUser({ email, password, full_name: fullName, role });
+      toast.success(`${role === 'admin' ? 'Admin' : 'Student'} account created!`);
+      onSuccess();
+      onClose();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to create user');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="bg-[#18181b] border border-[#27272a] rounded-lg max-w-lg w-full">
+        <div className="border-b border-[#27272a] p-6 flex items-center justify-between">
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <UserPlus className="w-6 h-6 text-[#00f0ff]" />
+            Create User Account
+          </h2>
+          <button onClick={onClose} className="text-[#a1a1aa] hover:text-white">✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Full Name</label>
+            <input
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+              data-testid="user-fullname-input"
+              className="w-full px-4 py-2 bg-[#09090b] border border-[#27272a] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#00f0ff]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              data-testid="user-email-input"
+              className="w-full px-4 py-2 bg-[#09090b] border border-[#27272a] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#00f0ff]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              data-testid="user-password-input"
+              className="w-full px-4 py-2 bg-[#09090b] border border-[#27272a] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#00f0ff]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Role</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              data-testid="user-role-select"
+              className="w-full px-4 py-2 bg-[#09090b] border border-[#27272a] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#00f0ff]"
+            >
+              <option value="student">Student</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+
+          <div className="flex gap-4 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2 border border-[#27272a] rounded-md hover:border-[#00f0ff] transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              data-testid="submit-user-button"
+              className="flex-1 py-2 bg-gradient-to-r from-[#00f0ff] to-[#7c3aed] text-white font-semibold rounded-md disabled:opacity-50"
+            >
+              {submitting ? 'Creating...' : 'Create User'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
@@ -392,6 +613,8 @@ const CreateTestModal = ({ onClose, onSuccess }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [duration, setDuration] = useState(60);
+  const [startsAt, setStartsAt] = useState('');
+  const [endsAt, setEndsAt] = useState('');
   const [questions, setQuestions] = useState([
     { question: '', options: ['', '', '', ''], correct_option: 0, marks: 1 },
   ]);
@@ -423,6 +646,8 @@ const CreateTestModal = ({ onClose, onSuccess }) => {
         duration_minutes: duration,
         questions,
         total_marks: totalMarks,
+        starts_at: startsAt ? new Date(startsAt).toISOString() : null,
+        ends_at: endsAt ? new Date(endsAt).toISOString() : null,
       });
       toast.success('Test created successfully!');
       onSuccess();
@@ -477,6 +702,34 @@ const CreateTestModal = ({ onClose, onSuccess }) => {
               className="w-full px-4 py-2 bg-[#09090b] border border-[#27272a] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#00f0ff]"
             />
           </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Available From <span className="text-xs text-[#a1a1aa]">(optional)</span>
+              </label>
+              <input
+                type="datetime-local"
+                value={startsAt}
+                onChange={(e) => setStartsAt(e.target.value)}
+                data-testid="test-starts-at-input"
+                className="w-full px-4 py-2 bg-[#09090b] border border-[#27272a] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#00f0ff]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Available Until <span className="text-xs text-[#a1a1aa]">(optional)</span>
+              </label>
+              <input
+                type="datetime-local"
+                value={endsAt}
+                onChange={(e) => setEndsAt(e.target.value)}
+                data-testid="test-ends-at-input"
+                className="w-full px-4 py-2 bg-[#09090b] border border-[#27272a] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#00f0ff]"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-[#a1a1aa] -mt-2">Leave blank for always available. Students only see the test within this window.</p>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -575,6 +828,8 @@ const CreateAssignmentModal = ({ onClose, onSuccess }) => {
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [totalMarks, setTotalMarks] = useState(100);
+  const [startsAt, setStartsAt] = useState('');
+  const [endsAt, setEndsAt] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -585,6 +840,8 @@ const CreateAssignmentModal = ({ onClose, onSuccess }) => {
         description,
         due_date: dueDate ? new Date(dueDate).toISOString() : null,
         total_marks: totalMarks,
+        starts_at: startsAt ? new Date(startsAt).toISOString() : null,
+        ends_at: endsAt ? new Date(endsAt).toISOString() : null,
       });
       toast.success('Assignment created successfully!');
       onSuccess();
@@ -653,6 +910,34 @@ const CreateAssignmentModal = ({ onClose, onSuccess }) => {
               />
             </div>
           </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Available From <span className="text-xs text-[#a1a1aa]">(optional)</span>
+              </label>
+              <input
+                type="datetime-local"
+                value={startsAt}
+                onChange={(e) => setStartsAt(e.target.value)}
+                data-testid="assignment-starts-at-input"
+                className="w-full px-4 py-2 bg-[#09090b] border border-[#27272a] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#00f0ff]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Available Until <span className="text-xs text-[#a1a1aa]">(optional)</span>
+              </label>
+              <input
+                type="datetime-local"
+                value={endsAt}
+                onChange={(e) => setEndsAt(e.target.value)}
+                data-testid="assignment-ends-at-input"
+                className="w-full px-4 py-2 bg-[#09090b] border border-[#27272a] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#00f0ff]"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-[#a1a1aa] -mt-2">Leave blank for always available. Controls when students see this assignment.</p>
 
           <div className="flex gap-4">
             <button

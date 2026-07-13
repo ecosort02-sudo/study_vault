@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { tests, assignments, grades, announcements } from '../lib/api';
-import { BookOpen, FileText, Award, Bell, LogOut, ClipboardList } from 'lucide-react';
+import { BookOpen, FileText, Award, Bell, LogOut, ClipboardList, Lock, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import Logo from '../components/Logo';
 
 const StudentDashboard = () => {
   const { user, logout } = useAuth();
@@ -89,9 +90,12 @@ const StudentDashboard = () => {
       {/* Header */}
       <header className="relative z-10 border-b border-[#27272a] bg-[#18181b]/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">Student Portal</h1>
-            <p className="text-sm text-[#a1a1aa]">Welcome, {user?.full_name}</p>
+          <div className="flex items-center gap-6">
+            <Logo size="md" />
+            <div className="hidden md:block h-8 w-px bg-[#27272a]"></div>
+            <div className="hidden md:block">
+              <p className="text-sm text-[#a1a1aa]">Welcome, {user?.full_name}</p>
+            </div>
           </div>
           <button
             onClick={handleLogout}
@@ -202,19 +206,43 @@ const StudentDashboard = () => {
                         data-testid={`test-card-${test.id}`}
                         className="bg-[#18181b] border border-[#27272a] rounded-lg p-6 card-hover"
                       >
-                        <h3 className="text-lg font-semibold mb-2">{test.title}</h3>
+                        <div className="flex items-start justify-between mb-2">
+                          <h3 className="text-lg font-semibold">{test.title}</h3>
+                          {test.already_attempted && (
+                            <span className="px-2 py-1 bg-[#00ff66]/20 text-[#00ff66] text-xs rounded-full flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" />
+                              Attempted
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-[#a1a1aa] mb-4">{test.description}</p>
                         <div className="flex items-center justify-between text-sm text-[#a1a1aa] mb-4">
                           <span>Duration: {test.duration_minutes} mins</span>
                           <span>Total Marks: {test.total_marks}</span>
                         </div>
-                        <button
-                          onClick={() => navigate(`/test/${test.id}`)}
-                          data-testid={`start-test-${test.id}`}
-                          className="w-full py-2 bg-gradient-to-r from-[#00f0ff] to-[#7c3aed] text-white font-semibold rounded-md hover:shadow-lg transition-all"
-                        >
-                          Start Test
-                        </button>
+                        {test.ends_at && (
+                          <div className="text-xs text-[#a1a1aa] mb-3">
+                            Closes: {new Date(test.ends_at).toLocaleString()}
+                          </div>
+                        )}
+                        {test.already_attempted ? (
+                          <button
+                            disabled
+                            data-testid={`test-attempted-${test.id}`}
+                            className="w-full py-2 bg-[#27272a] text-[#a1a1aa] font-semibold rounded-md flex items-center justify-center gap-2 cursor-not-allowed"
+                          >
+                            <Lock className="w-4 h-4" />
+                            Already Attempted
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => navigate(`/test/${test.id}`)}
+                            data-testid={`start-test-${test.id}`}
+                            className="w-full py-2 bg-gradient-to-r from-[#00f0ff] to-[#7c3aed] text-white font-semibold rounded-md hover:shadow-lg transition-all"
+                          >
+                            Start Test
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -230,24 +258,11 @@ const StudentDashboard = () => {
                 ) : (
                   <div className="space-y-4">
                     {assignmentsList.map((assignment) => (
-                      <div
+                      <AssignmentCard
                         key={assignment.id}
-                        data-testid={`assignment-${assignment.id}`}
-                        className="bg-[#18181b] border border-[#27272a] rounded-lg p-6"
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <h3 className="text-lg font-semibold">{assignment.title}</h3>
-                          <span className="px-3 py-1 bg-[#7c3aed]/20 text-[#7c3aed] text-xs rounded-full font-mono">
-                            {assignment.total_marks} marks
-                          </span>
-                        </div>
-                        <p className="text-[#a1a1aa] mb-4">{assignment.description}</p>
-                        {assignment.due_date && (
-                          <div className="text-sm text-[#a1a1aa]">
-                            Due: {new Date(assignment.due_date).toLocaleDateString()}
-                          </div>
-                        )}
-                      </div>
+                        assignment={assignment}
+                        onSubmitted={loadData}
+                      />
                     ))}
                   </div>
                 )}
@@ -272,6 +287,9 @@ const StudentDashboard = () => {
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase tracking-wider">
                             Percentage
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase tracking-wider">
+                            Percentile
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase tracking-wider">
                             Date
@@ -299,6 +317,15 @@ const StudentDashboard = () => {
                                 >
                                   {percentage}%
                                 </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {grade.percentile !== null && grade.percentile !== undefined ? (
+                                  <span className="px-2 py-1 bg-[#7c3aed]/20 text-[#7c3aed] rounded-full text-xs font-mono">
+                                    {grade.percentile}%ile
+                                  </span>
+                                ) : (
+                                  <span className="text-[#a1a1aa] text-xs">—</span>
+                                )}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-[#a1a1aa]">
                                 {new Date(grade.graded_at).toLocaleDateString()}
@@ -347,3 +374,99 @@ const StudentDashboard = () => {
 };
 
 export default StudentDashboard;
+
+// AssignmentCard component with submission capability
+const AssignmentCard = ({ assignment, onSubmitted }) => {
+  const [showSubmit, setShowSubmit] = useState(false);
+  const [content, setContent] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await assignments.submit({ assignment_id: assignment.id, content });
+      toast.success('Assignment submitted successfully!');
+      setShowSubmit(false);
+      setContent('');
+      onSubmitted();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to submit');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      data-testid={`assignment-${assignment.id}`}
+      className="bg-[#18181b] border border-[#27272a] rounded-lg p-6"
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-semibold">{assignment.title}</h3>
+          {assignment.already_submitted && (
+            <span className="px-2 py-1 bg-[#00ff66]/20 text-[#00ff66] text-xs rounded-full flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" />
+              Submitted
+            </span>
+          )}
+        </div>
+        <span className="px-3 py-1 bg-[#7c3aed]/20 text-[#7c3aed] text-xs rounded-full font-mono">
+          {assignment.total_marks} marks
+        </span>
+      </div>
+      <p className="text-[#a1a1aa] mb-4">{assignment.description}</p>
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-[#a1a1aa] space-y-1">
+          {assignment.due_date && (
+            <div>Due: {new Date(assignment.due_date).toLocaleString()}</div>
+          )}
+          {assignment.ends_at && (
+            <div>Closes: {new Date(assignment.ends_at).toLocaleString()}</div>
+          )}
+        </div>
+        {assignment.already_submitted ? (
+          <button
+            disabled
+            data-testid={`assignment-submitted-${assignment.id}`}
+            className="px-4 py-2 bg-[#27272a] text-[#a1a1aa] rounded-md flex items-center gap-2 cursor-not-allowed"
+          >
+            <Lock className="w-4 h-4" />
+            Already Submitted
+          </button>
+        ) : (
+          <button
+            onClick={() => setShowSubmit(!showSubmit)}
+            data-testid={`assignment-submit-toggle-${assignment.id}`}
+            className="px-4 py-2 bg-gradient-to-r from-[#00f0ff] to-[#7c3aed] text-white rounded-md text-sm font-semibold"
+          >
+            {showSubmit ? 'Cancel' : 'Submit Work'}
+          </button>
+        )}
+      </div>
+
+      {showSubmit && !assignment.already_submitted && (
+        <form onSubmit={handleSubmit} className="mt-4 space-y-3 pt-4 border-t border-[#27272a]">
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            required
+            rows={5}
+            data-testid={`assignment-content-${assignment.id}`}
+            placeholder="Enter your submission (paste text, links, or notes)..."
+            className="w-full px-4 py-2 bg-[#09090b] border border-[#27272a] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#00f0ff]"
+          />
+          <button
+            type="submit"
+            disabled={submitting}
+            data-testid={`assignment-submit-${assignment.id}`}
+            className="px-6 py-2 bg-gradient-to-r from-[#00f0ff] to-[#7c3aed] text-white font-semibold rounded-md disabled:opacity-50"
+          >
+            {submitting ? 'Submitting...' : 'Submit Assignment'}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+};

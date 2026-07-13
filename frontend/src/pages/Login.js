@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AlertCircle, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
+import Logo from '../components/Logo';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -41,10 +42,13 @@ const Login = () => {
       <div className="relative z-10 w-full max-w-md px-6">
         <div className="bg-[#18181b] border border-[#27272a] rounded-lg p-8 shadow-2xl">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-[#00f0ff] to-[#7c3aed] mb-4">
-              <LogIn className="w-8 h-8 text-white" />
+            <div className="flex justify-center mb-4">
+              <Logo size="lg" showText={false} />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2">Student Portal</h1>
+            <h1 className="text-3xl font-bold tracking-tight mb-2">
+              <span className="text-white">Study</span>
+              <span className="bg-gradient-to-r from-[#00f0ff] to-[#7c3aed] bg-clip-text text-transparent">Vault</span>
+            </h1>
             <p className="text-[#a1a1aa]">Sign in to access your dashboard</p>
           </div>
 
