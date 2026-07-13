@@ -1,0 +1,123 @@
+{
+  "theme_and_vibe": {
+    "theme_mode": "dark",
+    "description": "Minimal/Dark theme with Vibrant/Colorful accents. Modern/Professional blended into an 'Elite Training Facility' / 'Cyber-academic' archetype. Prioritizes focus, data density, and high-tech security (hackerproof).",
+    "archetype": "ARCHETYPE 2 (Performance Pro) + ARCHETYPE 7 (Electric Neon accents)"
+  },
+  "typography": {
+    "font_families": {
+      "headings": "Cabinet Grotesk or Clash Display (Professional, modern, slight tech edge)",
+      "body": "IBM Plex Sans or JetBrains Mono (Tech-forward, tabular numbers for grades/stats)"
+    },
+    "rules": [
+      "NO Inter for headings.",
+      "Headings MUST use tracking-tight or tracking-tighter.",
+      "Variable fonts preferred. Emphasize weight contrast.",
+      "Never center align default text, left align for readability."
+    ]
+  },
+  "colors": {
+    "palette": {
+      "background": "#09090b",
+      "surface_card": "#18181b",
+      "text_primary": "#ffffff",
+      "text_secondary": "#a1a1aa",
+      "primary_accent": "#00f0ff",
+      "secondary_accent": "#7c3aed",
+      "danger_alert": "#ff003c",
+      "success_alert": "#00ff66",
+      "border": "#27272a"
+    },
+    "rules": [
+      "Use dark gray/navy-tinted black for background, avoid pure #000000.",
+      "High contrast required: ensure APCA standards met.",
+      "Gradient accents allowed ONLY for primary interactive elements or data highlights.",
+      "Danger alert MUST be vibrant and instantly recognizable for the Anti-Cheat UI."
+    ]
+  },
+  "visual_enhancers": {
+    "surfaces": "Grid Borders (The Technical Look). Minimal box shadows; rely on 1px borders and slight inner glow or luminous active borders.",
+    "glassmorphism": "Used only for floating sticky headers or modals. Backdrop blur heavy (blur-2xl) with 1px border-white/10.",
+    "textures": "Subtle noise overlay on the background to prevent digital flatness."
+  },
+  "layouts_and_grids": {
+    "strategy": "MODE B: High Density Grid for Dashboards.",
+    "rules": [
+      "Base grid for dashboard: grid-cols-1 md:grid-cols-3 lg:grid-cols-4. Tight gap (gap-4 or gap-6).",
+      "Always pad containers with borders to prevent collision (p-6 or p-8).",
+      "Maintain crisp edges, no excessive rounded corners (max radius md, 6px-8px)."
+    ]
+  },
+  "components": {
+    "general": "Prefer Shadcn components heavily customized to match the dark neon tech theme. Override the Vercel look.",
+    "cards": "Flat solid background, 1px solid border. Hover state: slight lift and border color brightens. DON'T overuse card component; go cardless or rectangular dense styles.",
+    "buttons": "Sharp or slightly rounded corners, vibrant background on primary buttons, interactive hover states.",
+    "forms": "Inputs should have flat backgrounds with visible borders. Focus state must glow with primary accent.",
+    "tables": "Use for Assignments, Grades, and Admin Submissions. High contrast headers. Tabular font for numbers.",
+    "alerts": "For Anti-cheat violations, use heavy visual warnings with danger color."
+  },
+  "motion": {
+    "rules": [
+      "Micro-animations on all interactive elements (hover, active).",
+      "Smooth layout transitions between dashboard tabs.",
+      "DO NOT apply `transition: all` globally. Apply transitions to specific properties."
+    ]
+  },
+  "icons_and_assets": {
+    "icon_library": "lucide-react",
+    "image_urls": [
+      {
+        "url": "https://images.pexels.com/photos/18337643/pexels-photo-18337643.jpeg",
+        "description": "Abstract neon lights and geometric shapes",
+        "category": "login_background or hero_section"
+      },
+      {
+        "url": "https://images.pexels.com/photos/12187128/pexels-photo-12187128.jpeg",
+        "description": "Vibrant geometric neon design",
+        "category": "admin_dashboard_banner"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1497091071254-cc9b2ba7c48a",
+        "description": "Person using track pad in dark room",
+        "category": "student_dashboard_welcome"
+      }
+    ],
+    "rules": [
+      "Never use placeholder image URLs."
+    ]
+  },
+  "accessibility": {
+    "rules": [
+      "All interactive elements MUST include `data-testid` attribute (e.g., `data-testid=\"login-submit-button\"`).",
+      "Support keyboard navigation and focus rings on all inputs/buttons.",
+      "Ensure color contrast meets WCAG AA/APCA standards."
+    ]
+  },
+  "GENERAL_UI_UX_DESIGN_GUIDELINES": [
+    "CRITICAL: DO NOT use complete `transparent` background in header, overlays, any surface that has content under it. Example: Dropdown with transparent background.",
+    "All interactive and key informational elements MUST include a `data-testid` attribute to facilitate robust automated testing.",
+    "Use optical alignment over geometrical alignment.",
+    "Focus on negative space and contrast."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Avoid the 'AI slop' aesthetic by ensuring distinct hover states, sharp typography, and dense, functional layouts.",
+    "Do not center align the app container (.App { text-align: center; } is FORBIDDEN).",
+    "NEVER use emojis for icons. Use lucide-react.",
+    "Use sonner for toast notifications.",
+    "Prioritize pre-existing components from `src/components/ui`.",
+    "Create a hackerproof environment: enforce route protection, prevent context menu / inspect element for non-admins.",
+    "Implement Supabase Auth properly with strict role-based access (student vs admin)."
+  ],
+  "instructions_to_main_agent": [
+    "Code Implementation Note: You are working with .js / .jsx files. Do not use TypeScript (.tsx).",
+    "Implement a unified login page with Supabase auth (Email/Password), routing to Student or Admin dashboard based on role.",
+    "Student Dashboard: Sections for Tests (MCQ), Assignments, Grades, Announcements.",
+    "Tests Section: When a test is opened, initiate the Anti-Cheat Tracker. Listen for `visibilitychange` or `blur` events. Increment a counter every time the tab loses focus.",
+    "Anti-Cheat Logic: If tab switch counter > 5, flag the test submission and record it in the database for the Admin.",
+    "Security: Prevent right-click (`contextmenu`) and common inspect shortcuts (F12, Ctrl+Shift+I) on the student portal using global event listeners.",
+    "Admin Dashboard: Create/manage tests, assignments. View submissions and a dedicated 'Violations' view displaying the tab switch counts per student per test.",
+    "Style the portal with a minimal dark theme, utilizing vibrant neon accents (cyan/purple) for primary buttons and severe red alerts for cheating warnings.",
+    "Use the Grid Borders pattern for data presentation in the Admin view to make it look like an elite analytical terminal."
+  ]
+}
