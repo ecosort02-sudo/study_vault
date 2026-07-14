@@ -19,9 +19,13 @@ import {
   Pencil,
   UserX,
   UserCheck,
+  Trash2,
+  Calendar,
+  Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Logo from '../components/Logo';
+import { Reveal } from '../hooks/useReveal';
 
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
@@ -76,23 +80,31 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#09090b]">
+    <div className="min-h-screen bg-[#09090b] relative">
       <div className="noise-bg"></div>
+      <div className="orb orb-cyan"></div>
+      <div className="orb orb-purple"></div>
 
       {/* Header */}
-      <header className="relative z-10 border-b border-[#27272a] bg-[#18181b]/80 backdrop-blur-xl">
+      <header className="relative z-10 border-b border-[#27272a] bg-[#09090b]/70 backdrop-blur-xl sticky top-0">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Logo size="md" />
             <div className="hidden md:block h-8 w-px bg-[#27272a]"></div>
-            <div className="hidden md:block">
-              <p className="text-sm text-[#a1a1aa]">Admin • {user?.full_name}</p>
+            <div className="hidden md:flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#00f0ff] flex items-center justify-center font-mono text-xs font-bold">
+                {user?.full_name?.charAt(0)?.toUpperCase()}
+              </div>
+              <div>
+                <p className="text-sm">Admin · {user?.full_name}</p>
+                <p className="text-xs text-[#a1a1aa]">Instructor console</p>
+              </div>
             </div>
           </div>
           <button
             onClick={handleLogout}
             data-testid="admin-logout-button"
-            className="flex items-center gap-2 px-4 py-2 border border-[#27272a] rounded-md hover:border-[#00f0ff] transition-colors"
+            className="flex items-center gap-2 px-4 py-2 border border-[#27272a] rounded-md hover:border-[#ff003c] hover:text-[#ff003c] transition-colors text-sm"
           >
             <LogOut className="w-4 h-4" />
             Logout
@@ -101,11 +113,11 @@ const AdminDashboard = () => {
       </header>
 
       {/* Navigation */}
-      <div className="relative z-10 border-b border-[#27272a] bg-[#18181b]/60 backdrop-blur-lg">
-        <div className="max-w-7xl mx-auto px-6">
-          <nav className="flex gap-1">
+      <div className="relative z-10 border-b border-[#27272a] bg-[#09090b]/40 backdrop-blur-lg">
+        <div className="max-w-7xl mx-auto px-6 overflow-x-auto">
+          <nav className="flex gap-1 min-w-max">
             {[
-              { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+              { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
               { id: 'tests', label: 'Tests', icon: BookOpen },
               { id: 'assignments', label: 'Assignments', icon: FileText },
               { id: 'announcements', label: 'Announcements', icon: Bell },
@@ -113,19 +125,21 @@ const AdminDashboard = () => {
               { id: 'violations', label: 'Violations', icon: AlertTriangle },
             ].map((tab) => {
               const Icon = tab.icon;
+              const active = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   data-testid={`admin-tab-${tab.id}`}
-                  className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
-                    activeTab === tab.id
-                      ? 'border-[#00f0ff] text-[#00f0ff]'
-                      : 'border-transparent text-[#a1a1aa] hover:text-white'
+                  className={`relative flex items-center gap-2 px-5 py-3 text-sm transition-colors ${
+                    active ? 'text-white' : 'text-[#a1a1aa] hover:text-white'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className={`w-4 h-4 ${active ? 'text-[#00f0ff]' : ''}`} />
                   {tab.label}
+                  {active && (
+                    <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-[#00f0ff] to-[#7c3aed] rounded-full"></div>
+                  )}
                 </button>
               );
             })}
@@ -143,84 +157,135 @@ const AdminDashboard = () => {
           <>
             {activeTab === 'dashboard' && stats && (
               <div className="space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Hero */}
+                <div className="relative overflow-hidden rounded-3xl border border-[#27272a] bg-gradient-to-br from-[#18181b] via-[#0f0f11] to-[#18181b] p-8 md:p-10 animate-in">
+                  <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-gradient-to-br from-[#7c3aed]/25 to-transparent blur-3xl"></div>
+                  <div className="absolute -left-10 -bottom-10 w-60 h-60 rounded-full bg-gradient-to-tr from-[#00f0ff]/20 to-transparent blur-3xl"></div>
+                  <div className="grid-pattern absolute inset-0 opacity-40"></div>
+                  <div className="relative">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#7c3aed]/30 bg-[#7c3aed]/5 text-xs font-mono uppercase tracking-wider text-[#7c3aed] mb-4">
+                      <LayoutDashboard className="w-3 h-3" />
+                      Instructor Console
+                    </div>
+                    <h1 className="font-display text-3xl md:text-4xl font-bold tracking-tight mb-2">
+                      Welcome back, <span className="text-gradient">{user?.full_name?.split(' ')[0]}</span>
+                    </h1>
+                    <p className="text-[#a1a1aa] max-w-xl">
+                      Manage your entire course from here — schedule tests, publish results, review violations, and keep the learning fair.
+                    </p>
+                    <div className="flex flex-wrap gap-3 mt-6">
+                      <button
+                        onClick={() => setShowCreateTest(true)}
+                        data-testid="hero-create-test"
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#00f0ff] to-[#7c3aed] text-white text-sm font-semibold hover:shadow-[0_10px_30px_rgba(0,240,255,0.3)] transition-all"
+                      >
+                        <Plus className="w-4 h-4" />
+                        New Test
+                      </button>
+                      <button
+                        onClick={() => setShowCreateAnnouncement(true)}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#27272a] hover:border-[#00f0ff] text-sm text-white transition-colors"
+                      >
+                        <Bell className="w-4 h-4" />
+                        Announce
+                      </button>
+                      <button
+                        onClick={() => setShowCreateUser(true)}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#27272a] hover:border-[#00f0ff] text-sm text-white transition-colors"
+                      >
+                        <UserPlus className="w-4 h-4" />
+                        Add User
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {[
-                    { label: 'Total Students', value: stats.total_students, icon: Users, color: '#00f0ff' },
-                    { label: 'Total Tests', value: stats.total_tests, icon: BookOpen, color: '#7c3aed' },
-                    { label: 'Assignments', value: stats.total_assignments, icon: FileText, color: '#00ff66' },
-                    { label: 'Violations', value: stats.total_violations, icon: AlertTriangle, color: '#ff003c' },
+                    { label: 'Total Students', value: stats.total_students, icon: Users, color: '#00f0ff', bg: 'from-[#00f0ff]/10 to-transparent' },
+                    { label: 'Total Tests', value: stats.total_tests, icon: BookOpen, color: '#7c3aed', bg: 'from-[#7c3aed]/10 to-transparent' },
+                    { label: 'Assignments', value: stats.total_assignments, icon: FileText, color: '#00ff66', bg: 'from-[#00ff66]/10 to-transparent' },
+                    { label: 'Violations', value: stats.total_violations, icon: AlertTriangle, color: '#ff003c', bg: 'from-[#ff003c]/10 to-transparent' },
                   ].map((stat, idx) => {
                     const Icon = stat.icon;
                     return (
                       <div
                         key={idx}
                         data-testid={`admin-stat-${idx}`}
-                        className="bg-[#18181b] border border-[#27272a] rounded-lg p-6 hover:border-[#00f0ff] transition-colors"
+                        className={`animate-in stagger-${idx + 1} relative rounded-2xl border border-[#27272a] bg-gradient-to-br ${stat.bg} p-5 hover:border-[#3f3f46] transition-colors overflow-hidden`}
                       >
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-start justify-between mb-3">
                           <div
-                            className="w-12 h-12 rounded-lg flex items-center justify-center"
-                            style={{ backgroundColor: `${stat.color}15` }}
+                            className="w-10 h-10 rounded-xl flex items-center justify-center"
+                            style={{ backgroundColor: `${stat.color}15`, border: `1px solid ${stat.color}30` }}
                           >
-                            <Icon className="w-6 h-6" style={{ color: stat.color }} />
+                            <Icon className="w-5 h-5" style={{ color: stat.color }} />
                           </div>
-                          <div className="text-3xl font-bold font-mono">{stat.value}</div>
                         </div>
-                        <div className="text-sm text-[#a1a1aa]">{stat.label}</div>
+                        <div className="text-3xl font-bold font-mono tracking-tight">{stat.value}</div>
+                        <div className="text-xs text-[#a1a1aa] mt-1 uppercase tracking-wider">{stat.label}</div>
                       </div>
                     );
                   })}
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="bg-[#18181b] border border-[#27272a] rounded-lg p-6">
-                    <h3 className="text-lg font-semibold mb-4">Recent Tests</h3>
+                  <div className="rounded-2xl border border-[#27272a] bg-[#18181b] p-6 animate-in stagger-5">
+                    <h3 className="text-lg font-semibold mb-5 flex items-center gap-2">
+                      <BookOpen className="w-5 h-5 text-[#00f0ff]" />
+                      Recent Tests
+                    </h3>
                     <div className="space-y-3">
                       {tests.slice(0, 5).map((test) => (
                         <div
                           key={test.id}
                           data-testid={`recent-test-${test.id}`}
-                          className="flex items-center justify-between p-3 border border-[#27272a] rounded-md"
+                          className="flex items-center justify-between p-3 border border-[#27272a] rounded-lg hover:border-[#00f0ff]/30 transition-colors"
                         >
                           <div>
                             <div className="font-medium">{test.title}</div>
-                            <div className="text-xs text-[#a1a1aa]">{test.total_marks} marks</div>
+                            <div className="text-xs text-[#a1a1aa]">{test.total_marks} marks · {test.questions.length} Q</div>
                           </div>
                           <span
-                            className={`px-2 py-1 rounded-full text-xs ${
-                              test.is_active
+                            className={`px-2 py-1 rounded-full text-xs font-mono ${
+                              test.results_published
                                 ? 'bg-[#00ff66]/20 text-[#00ff66]'
                                 : 'bg-[#a1a1aa]/20 text-[#a1a1aa]'
                             }`}
                           >
-                            {test.is_active ? 'Active' : 'Inactive'}
+                            {test.results_published ? 'Live' : 'Hidden'}
                           </span>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div className="bg-[#18181b] border border-[#27272a] rounded-lg p-6">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <div className="rounded-2xl border border-[#27272a] bg-[#18181b] p-6 animate-in stagger-6">
+                    <h3 className="text-lg font-semibold mb-5 flex items-center gap-2">
                       <AlertTriangle className="w-5 h-5 text-[#ff003c]" />
                       Recent Violations
                     </h3>
                     <div className="space-y-3">
-                      {violations.slice(0, 5).map((violation, idx) => (
-                        <div
-                          key={idx}
-                          data-testid={`recent-violation-${idx}`}
-                          className="p-3 border border-[#ff003c]/30 bg-[#ff003c]/5 rounded-md"
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-medium text-sm">{violation.user_name}</span>
-                            <span className="text-xs text-[#ff003c] font-mono">
-                              {violation.tab_switch_count} switches
-                            </span>
+                      {violations.length === 0 ? (
+                        <div className="text-sm text-[#a1a1aa] py-6 text-center">No cheating attempts. Class is honest!</div>
+                      ) : (
+                        violations.slice(0, 5).map((violation, idx) => (
+                          <div
+                            key={idx}
+                            data-testid={`recent-violation-${idx}`}
+                            className="p-3 border border-[#ff003c]/30 bg-[#ff003c]/5 rounded-lg"
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-medium text-sm">{violation.user_name}</span>
+                              <span className="text-xs text-[#ff003c] font-mono">
+                                {violation.tab_switch_count} switches
+                              </span>
+                            </div>
+                            <div className="text-xs text-[#a1a1aa]">{violation.test_title}</div>
                           </div>
-                          <div className="text-xs text-[#a1a1aa]">{violation.test_title}</div>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </div>
                 </div>
@@ -272,71 +337,120 @@ const AdminDashboard = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {tests.map((test) => (
-                    <div
-                      key={test.id}
-                      data-testid={`admin-test-${test.id}`}
-                      className="bg-[#18181b] border border-[#27272a] rounded-lg p-6"
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-lg font-semibold">{test.title}</h3>
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs ${
-                            test.results_published
-                              ? 'bg-[#00ff66]/20 text-[#00ff66]'
-                              : 'bg-[#a1a1aa]/20 text-[#a1a1aa]'
-                          }`}
-                        >
-                          {test.results_published ? 'Results Published' : 'Results Hidden'}
-                        </span>
-                      </div>
-                      <p className="text-sm text-[#a1a1aa] mb-4">{test.description}</p>
-                      <div className="flex items-center justify-between text-sm mb-4">
-                        <span className="text-[#a1a1aa]">{test.questions.length} questions</span>
-                        <span className="text-[#a1a1aa]">{test.total_marks} marks</span>
-                        <span className="text-[#a1a1aa]">{test.duration_minutes} mins</span>
-                      </div>
-                      {(test.starts_at || test.ends_at) && (
-                        <div className="text-xs text-[#a1a1aa] mb-4 space-y-1">
-                          {test.starts_at && <div>Starts: {new Date(test.starts_at).toLocaleString()}</div>}
-                          {test.ends_at && <div>Ends: {new Date(test.ends_at).toLocaleString()}</div>}
-                        </div>
-                      )}
-                      <button
-                        onClick={async () => {
-                          try {
-                            if (test.results_published) {
-                              await admin.unpublishTest(test.id);
-                              toast.success('Results hidden from students');
-                            } else {
-                              await admin.publishTest(test.id);
-                              toast.success('Results published to students');
-                            }
-                            loadData();
-                          } catch (error) {
-                            toast.error('Failed to update publish status');
-                          }
-                        }}
-                        data-testid={`toggle-publish-${test.id}`}
-                        className={`w-full py-2 rounded-md text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
-                          test.results_published
-                            ? 'bg-[#27272a] hover:bg-[#3f3f46] text-white'
-                            : 'bg-gradient-to-r from-[#00f0ff] to-[#7c3aed] text-white'
-                        }`}
+                  {tests.map((test, idx) => (
+                    <Reveal key={test.id} delay={idx * 60}>
+                      <div
+                        data-testid={`admin-test-${test.id}`}
+                        className="relative overflow-hidden bg-[#18181b] border border-[#27272a] rounded-2xl p-6 hover:border-[#00f0ff]/30 transition-all"
                       >
-                        {test.results_published ? (
-                          <>
-                            <EyeOff className="w-4 h-4" />
-                            Unpublish Results
-                          </>
-                        ) : (
-                          <>
-                            <Eye className="w-4 h-4" />
-                            Publish Results
-                          </>
-                        )}
-                      </button>
-                    </div>
+                        <div
+                          className="absolute -right-8 -top-8 w-24 h-24 rounded-full opacity-20 blur-2xl"
+                          style={{ background: test.results_published ? '#00ff66' : '#7c3aed' }}
+                        ></div>
+
+                        <div className="relative">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-9 h-9 rounded-lg flex items-center justify-center"
+                                style={{ backgroundColor: test.results_published ? '#00ff6615' : '#7c3aed15' }}
+                              >
+                                <BookOpen className="w-4 h-4" style={{ color: test.results_published ? '#00ff66' : '#7c3aed' }} />
+                              </div>
+                              <h3 className="text-lg font-semibold">{test.title}</h3>
+                            </div>
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-mono ${
+                                test.results_published
+                                  ? 'bg-[#00ff66]/20 text-[#00ff66]'
+                                  : 'bg-[#a1a1aa]/20 text-[#a1a1aa]'
+                              }`}
+                            >
+                              {test.results_published ? 'Published' : 'Hidden'}
+                            </span>
+                          </div>
+                          <p className="text-sm text-[#a1a1aa] mb-4 line-clamp-2">{test.description}</p>
+                          <div className="flex items-center gap-4 text-xs text-[#a1a1aa] mb-4 font-mono">
+                            <span>{test.questions.length} Q</span>
+                            <span>{test.total_marks} marks</span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" /> {test.duration_minutes}m
+                            </span>
+                          </div>
+                          {(test.starts_at || test.ends_at || test.publish_at || test.unpublish_at) && (
+                            <div className="text-xs text-[#a1a1aa] mb-4 space-y-1 border-t border-[#27272a] pt-3">
+                              {test.starts_at && (
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="w-3 h-3 text-[#00f0ff]" />
+                                  Opens: {new Date(test.starts_at).toLocaleString()}
+                                </div>
+                              )}
+                              {test.ends_at && (
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="w-3 h-3 text-[#ff003c]" />
+                                  Closes: {new Date(test.ends_at).toLocaleString()}
+                                </div>
+                              )}
+                              {test.publish_at && (
+                                <div className="flex items-center gap-1">
+                                  <Eye className="w-3 h-3 text-[#00ff66]" />
+                                  Auto-publish: {new Date(test.publish_at).toLocaleString()}
+                                </div>
+                              )}
+                              {test.unpublish_at && (
+                                <div className="flex items-center gap-1">
+                                  <EyeOff className="w-3 h-3 text-[#a1a1aa]" />
+                                  Auto-hide: {new Date(test.unpublish_at).toLocaleString()}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  if (test.results_published) {
+                                    await admin.unpublishTest(test.id);
+                                    toast.success('Results hidden');
+                                  } else {
+                                    await admin.publishTest(test.id);
+                                    toast.success('Results published');
+                                  }
+                                  loadData();
+                                } catch (error) { toast.error('Failed'); }
+                              }}
+                              data-testid={`toggle-publish-${test.id}`}
+                              className={`flex-1 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
+                                test.results_published
+                                  ? 'bg-[#27272a] hover:bg-[#3f3f46] text-white'
+                                  : 'bg-gradient-to-r from-[#00f0ff] to-[#7c3aed] text-white'
+                              }`}
+                            >
+                              {test.results_published ? (
+                                <><EyeOff className="w-4 h-4" />Unpublish</>
+                              ) : (
+                                <><Eye className="w-4 h-4" />Publish</>
+                              )}
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (!window.confirm(`Delete "${test.title}"? All submissions & grades will be removed. This cannot be undone.`)) return;
+                                try {
+                                  await admin.deleteTest(test.id);
+                                  toast.success('Test deleted');
+                                  loadData();
+                                } catch (e) { toast.error('Failed to delete'); }
+                              }}
+                              data-testid={`delete-test-${test.id}`}
+                              className="p-2 border border-[#ff003c]/30 text-[#ff003c] hover:bg-[#ff003c]/10 rounded-lg transition-colors"
+                              title="Delete test"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </Reveal>
                   ))}
                 </div>
               </div>
@@ -813,6 +927,8 @@ const CreateTestModal = ({ onClose, onSuccess }) => {
   const [duration, setDuration] = useState(60);
   const [startsAt, setStartsAt] = useState('');
   const [endsAt, setEndsAt] = useState('');
+  const [publishAt, setPublishAt] = useState('');
+  const [unpublishAt, setUnpublishAt] = useState('');
   const [questions, setQuestions] = useState([
     { question: '', options: ['', '', '', ''], correct_option: 0, marks: 1 },
   ]);
@@ -846,6 +962,8 @@ const CreateTestModal = ({ onClose, onSuccess }) => {
         total_marks: totalMarks,
         starts_at: startsAt ? new Date(startsAt).toISOString() : null,
         ends_at: endsAt ? new Date(endsAt).toISOString() : null,
+        publish_at: publishAt ? new Date(publishAt).toISOString() : null,
+        unpublish_at: unpublishAt ? new Date(unpublishAt).toISOString() : null,
       });
       toast.success('Test created successfully!');
       onSuccess();
@@ -928,6 +1046,40 @@ const CreateTestModal = ({ onClose, onSuccess }) => {
             </div>
           </div>
           <p className="text-xs text-[#a1a1aa] -mt-2">Leave blank for always available. Students only see the test within this window.</p>
+
+          <div className="pt-4 border-t border-[#27272a]">
+            <p className="text-sm font-semibold text-[#00ff66] mb-3 flex items-center gap-2">
+              <Eye className="w-4 h-4" />
+              Auto-publish schedule (optional)
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Auto-Publish Results On
+                </label>
+                <input
+                  type="datetime-local"
+                  value={publishAt}
+                  onChange={(e) => setPublishAt(e.target.value)}
+                  data-testid="test-publish-at-input"
+                  className="w-full px-4 py-2 bg-[#09090b] border border-[#27272a] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#00ff66]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Auto-Unpublish Results On
+                </label>
+                <input
+                  type="datetime-local"
+                  value={unpublishAt}
+                  onChange={(e) => setUnpublishAt(e.target.value)}
+                  data-testid="test-unpublish-at-input"
+                  className="w-full px-4 py-2 bg-[#09090b] border border-[#27272a] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#00ff66]"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-[#a1a1aa] mt-2">Results will automatically publish/unpublish at these times. Leave blank to control manually.</p>
+          </div>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">

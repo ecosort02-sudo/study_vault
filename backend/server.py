@@ -62,6 +62,8 @@ class TestCreate(BaseModel):
     total_marks: int
     starts_at: Optional[datetime] = None
     ends_at: Optional[datetime] = None
+    publish_at: Optional[datetime] = None
+    unpublish_at: Optional[datetime] = None
 
 class TestResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -74,6 +76,8 @@ class TestResponse(BaseModel):
     is_active: bool
     starts_at: Optional[datetime]
     ends_at: Optional[datetime]
+    publish_at: Optional[datetime]
+    unpublish_at: Optional[datetime]
     results_published: bool
     created_at: datetime
 
@@ -140,6 +144,8 @@ class GradeResponse(BaseModel):
     total_marks: int
     graded_at: datetime
     percentile: Optional[float] = None
+    rank: Optional[int] = None
+    total_participants: Optional[int] = None
 
 class AnnouncementCreate(BaseModel):
     title: str
@@ -185,6 +191,9 @@ class TestReviewResponse(BaseModel):
     total_marks: int
     submitted_at: datetime
     results_published: bool
+    rank: Optional[int] = None
+    total_participants: Optional[int] = None
+    percentile: Optional[float] = None
     questions: List[TestReviewQuestion]
 
 # ---------------- Helpers ----------------
@@ -239,6 +248,51 @@ def is_assignment_available(assignment: Assignment) -> bool:
         return False
     return True
 
+async def auto_toggle_publications(db: AsyncSession):
+    """Auto publish/unpublish test results based on scheduled times."""
+    now = datetime.now(timezone.utc)
+    # Auto-publish
+    to_publish_result = await db.execute(
+        select(Test).where(
+            Test.results_published == False,
+            Test.publish_at != None,
+            Test.publish_at <= now,
+        )
+    )
+    changed = False
+    for test in to_publish_result.scalars().all():
+        test.results_published = True
+        grades_result = await db.execute(select(Grade).where(Grade.test_id == test.id))
+        for g in grades_result.scalars().all():
+            g.is_published = True
+        changed = True
+    # Auto-unpublish
+    to_unpublish_result = await db.execute(
+        select(Test).where(
+            Test.results_published == True,
+            Test.unpublish_at != None,
+            Test.unpublish_at <= now,
+        )
+    )
+    for test in to_unpublish_result.scalars().all():
+        test.results_published = False
+        grades_result = await db.execute(select(Grade).where(Grade.test_id == test.id))
+        for g in grades_result.scalars().all():
+            g.is_published = False
+        changed = True
+    if changed:
+        await db.commit()
+
+def compute_rank(all_scores: List[int], my_score: int) -> tuple:
+    """Return (rank, total_participants). Rank 1 = highest score."""
+    if not all_scores:
+        return None, None
+    total = len(all_scores)
+    # Dense ranking: how many distinct scores are strictly higher, plus 1
+    higher_scores = {s for s in all_scores if s > my_score}
+    rank = len(higher_scores) + 1
+    return rank, total
+
 # ---------------- Auth Routes ----------------
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
@@ -261,6 +315,7 @@ async def get_me(user: User = Depends(get_current_user)):
 # ---------------- Student Routes - Tests ----------------
 @api_router.get("/tests", response_model=List[TestListResponse])
 async def get_tests(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    await auto_toggle_publications(db)
     now = datetime.now(timezone.utc)
     # Only show tests that are currently within their availability window
     result = await db.execute(
@@ -298,6 +353,7 @@ async def get_tests(user: User = Depends(get_current_user), db: AsyncSession = D
 @api_router.get("/tests/{test_id}/review", response_model=TestReviewResponse)
 async def review_test(test_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Return student's submission with correct answers highlighted (only after results published)."""
+    await auto_toggle_publications(db)
     result = await db.execute(select(Test).where(Test.id == test_id))
     test = result.scalar_one_or_none()
     if not test:
@@ -329,6 +385,18 @@ async def review_test(test_id: str, user: User = Depends(get_current_user), db: 
             marks=q.get('marks', 1),
         ))
     
+    # Rank + percentile among all submissions
+    all_scores_result = await db.execute(
+        select(TestSubmission.score).where(TestSubmission.test_id == test_id)
+    )
+    all_scores = [row[0] for row in all_scores_result.all()]
+    rank, total_participants = compute_rank(all_scores, submission.score)
+    if all_scores and len(all_scores) > 1:
+        below_count = sum(1 for s in all_scores if s < submission.score)
+        percentile = round((below_count / len(all_scores)) * 100, 1)
+    else:
+        percentile = 100.0
+    
     return TestReviewResponse(
         test_id=test.id,
         test_title=test.title,
@@ -336,6 +404,9 @@ async def review_test(test_id: str, user: User = Depends(get_current_user), db: 
         total_marks=test.total_marks,
         submitted_at=submission.submitted_at,
         results_published=test.results_published,
+        rank=rank,
+        total_participants=total_participants,
+        percentile=percentile,
         questions=review_questions,
     )
 
@@ -468,6 +539,7 @@ async def submit_assignment(data: AssignmentSubmissionCreate, user: User = Depen
 # ---------------- Student Routes - Grades ----------------
 @api_router.get("/grades", response_model=List[GradeResponse])
 async def get_grades(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    await auto_toggle_publications(db)
     # Only published grades
     result = await db.execute(
         select(Grade).where(
@@ -480,18 +552,16 @@ async def get_grades(user: User = Depends(get_current_user), db: AsyncSession = 
     response = []
     for grade in grades:
         item = GradeResponse.model_validate(grade)
-        # Calculate percentile for test grades
+        # Calculate percentile + rank for test grades
         if grade.test_id:
-            # Get all scores for this test
             all_scores_result = await db.execute(
                 select(TestSubmission.score).where(TestSubmission.test_id == grade.test_id)
             )
             all_scores = [row[0] for row in all_scores_result.all()]
-            if len(all_scores) > 1:
+            if all_scores:
                 below_count = sum(1 for s in all_scores if s < grade.score)
-                item.percentile = round((below_count / len(all_scores)) * 100, 1)
-            else:
-                item.percentile = 100.0
+                item.percentile = round((below_count / len(all_scores)) * 100, 1) if len(all_scores) > 1 else 100.0
+                item.rank, item.total_participants = compute_rank(all_scores, grade.score)
         response.append(item)
     return response
 
@@ -564,12 +634,28 @@ async def create_test(data: TestCreate, user: User = Depends(require_admin), db:
     test = Test(
         title=data.title, description=data.description, questions=data.questions,
         duration_minutes=data.duration_minutes, total_marks=data.total_marks,
-        starts_at=data.starts_at, ends_at=data.ends_at, created_by=user.id
+        starts_at=data.starts_at, ends_at=data.ends_at,
+        publish_at=data.publish_at, unpublish_at=data.unpublish_at,
+        created_by=user.id
     )
     db.add(test)
     await db.commit()
     await db.refresh(test)
     return TestResponse.model_validate(test)
+
+@api_router.delete("/admin/tests/{test_id}")
+async def delete_test(test_id: str, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Test).where(Test.id == test_id))
+    test = result.scalar_one_or_none()
+    if not test:
+        raise HTTPException(status_code=404, detail="Test not found")
+    # Cascade will delete submissions; clean up grades
+    grades_result = await db.execute(select(Grade).where(Grade.test_id == test_id))
+    for g in grades_result.scalars().all():
+        await db.delete(g)
+    await db.delete(test)
+    await db.commit()
+    return {"success": True, "message": "Test deleted"}
 
 @api_router.get("/admin/tests", response_model=List[TestResponse])
 async def get_all_tests(user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):

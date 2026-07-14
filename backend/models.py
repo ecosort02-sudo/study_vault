@@ -34,6 +34,8 @@ class Test(Base):
     is_active = Column(Boolean, default=True, index=True)
     starts_at = Column(DateTime(timezone=True), nullable=True, index=True)
     ends_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    publish_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    unpublish_at = Column(DateTime(timezone=True), nullable=True, index=True)
     results_published = Column(Boolean, default=False, index=True)
     created_by = Column(String(36), nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

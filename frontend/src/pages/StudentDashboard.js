@@ -5,10 +5,11 @@ import { tests, assignments, grades, announcements } from '../lib/api';
 import {
   BookOpen, FileText, Award, Bell, LogOut, ClipboardList,
   Lock, CheckCircle2, TrendingUp, Sparkles, Trophy, Target,
-  Flame, Zap, ChevronRight, Clock, Calendar, XCircle,
+  Flame, Zap, ChevronRight, Clock, Calendar, XCircle, Medal,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Logo from '../components/Logo';
+import { Reveal } from '../hooks/useReveal';
 
 const StudentDashboard = () => {
   const { user, logout } = useAuth();
@@ -393,7 +394,9 @@ const TestsTab = ({ testsList, navigate }) => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {testsList.map((test, idx) => (
-            <TestCard key={test.id} test={test} navigate={navigate} idx={idx} />
+            <Reveal key={test.id} delay={idx * 60}>
+              <TestCard test={test} navigate={navigate} idx={idx} />
+            </Reveal>
           ))}
         </div>
       )}
@@ -527,8 +530,10 @@ const AssignmentsTab = ({ assignmentsList, onSubmitted }) => {
         <EmptyState message="No assignments right now" tall />
       ) : (
         <div className="space-y-4">
-          {assignmentsList.map((a) => (
-            <AssignmentCard key={a.id} assignment={a} onSubmitted={onSubmitted} />
+          {assignmentsList.map((a, idx) => (
+            <Reveal key={a.id} delay={idx * 80}>
+              <AssignmentCard assignment={a} onSubmitted={onSubmitted} />
+            </Reveal>
           ))}
         </div>
       )}
@@ -653,53 +658,70 @@ const GradesTab = ({ gradesList }) => {
       {gradesList.length === 0 ? (
         <EmptyState message="No grades yet. Your teacher will publish results here soon." tall />
       ) : (
-        <div className="rounded-2xl border border-[#27272a] bg-[#18181b] overflow-hidden">
-          <table className="w-full" data-testid="grades-table">
-            <thead className="bg-[#09090b] border-b border-[#27272a]">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase tracking-wider">Title</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase tracking-wider">Score</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase tracking-wider">Performance</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase tracking-wider">Percentile</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase tracking-wider">Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#27272a]">
-              {gradesList.map((g) => {
-                const pct = ((g.score / g.total_marks) * 100).toFixed(1);
-                const color = pct >= 75 ? '#00ff66' : pct >= 50 ? '#00f0ff' : '#ff003c';
-                return (
-                  <tr key={g.id} data-testid={`grade-row-${g.id}`} className="hover:bg-[#09090b]/40 transition-colors">
-                    <td className="px-6 py-4 font-medium">{g.title}</td>
-                    <td className="px-6 py-4 font-mono">
-                      {g.score}<span className="text-[#a1a1aa]">/{g.total_marks}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 max-w-[120px] bg-[#27272a] rounded-full h-1.5">
-                          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }}></div>
+        <Reveal>
+          <div className="rounded-2xl border border-[#27272a] bg-[#18181b] overflow-hidden">
+            <table className="w-full" data-testid="grades-table">
+              <thead className="bg-[#09090b] border-b border-[#27272a]">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase tracking-wider">Title</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase tracking-wider">Score</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase tracking-wider">Performance</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase tracking-wider">Rank</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase tracking-wider">Percentile</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase tracking-wider">Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#27272a]">
+                {gradesList.map((g) => {
+                  const pct = ((g.score / g.total_marks) * 100).toFixed(1);
+                  const color = pct >= 75 ? '#00ff66' : pct >= 50 ? '#00f0ff' : '#ff003c';
+                  const rankClass = g.rank === 1 ? 'rank-1' : g.rank === 2 ? 'rank-2' : g.rank === 3 ? 'rank-3' : '';
+                  return (
+                    <tr key={g.id} data-testid={`grade-row-${g.id}`} className="hover:bg-[#09090b]/40 transition-colors">
+                      <td className="px-6 py-4 font-medium">{g.title}</td>
+                      <td className="px-6 py-4 font-mono">
+                        {g.score}<span className="text-[#a1a1aa]">/{g.total_marks}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 max-w-[120px] bg-[#27272a] rounded-full h-1.5">
+                            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }}></div>
+                          </div>
+                          <span className="font-mono text-sm" style={{ color }}>{pct}%</span>
                         </div>
-                        <span className="font-mono text-sm" style={{ color }}>{pct}%</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {g.percentile !== null && g.percentile !== undefined ? (
-                        <span className="px-2.5 py-1 bg-[#7c3aed]/20 text-[#7c3aed] rounded-full text-xs font-mono">
-                          {g.percentile}%ile
-                        </span>
-                      ) : (
-                        <span className="text-[#a1a1aa] text-xs">—</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-[#a1a1aa]">
-                      {new Date(g.graded_at).toLocaleDateString()}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {g.rank ? (
+                          <div className="flex items-center gap-2">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold font-mono ${rankClass || 'bg-[#27272a] text-white'}`}>
+                              {g.rank <= 3 && <Medal className="w-3 h-3 inline mr-0.5" />}
+                              {g.rank}
+                            </div>
+                            <span className="text-xs text-[#a1a1aa] font-mono">/ {g.total_participants}</span>
+                          </div>
+                        ) : (
+                          <span className="text-[#a1a1aa] text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {g.percentile !== null && g.percentile !== undefined ? (
+                          <span className="px-2.5 py-1 bg-[#7c3aed]/20 text-[#7c3aed] rounded-full text-xs font-mono">
+                            {g.percentile}%ile
+                          </span>
+                        ) : (
+                          <span className="text-[#a1a1aa] text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-[#a1a1aa]">
+                        {new Date(g.graded_at).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Reveal>
       )}
     </div>
   );
@@ -719,27 +741,28 @@ const AnnouncementsTab = ({ announcementsList }) => {
       ) : (
         <div className="space-y-4">
           {announcementsList.map((a, idx) => (
-            <div
-              key={a.id}
-              data-testid={`announcement-card-${a.id}`}
-              className={`animate-in stagger-${(idx % 6) + 1} rounded-2xl border border-[#27272a] bg-[#18181b] p-6 hover:border-[#00f0ff]/40 transition-colors`}
-            >
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-lg bg-[#00f0ff]/15 border border-[#00f0ff]/30 flex items-center justify-center flex-shrink-0">
-                  <Bell className="w-5 h-5 text-[#00f0ff]" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-start justify-between mb-2 gap-4 flex-wrap">
-                    <h3 className="text-lg font-semibold">{a.title}</h3>
-                    <span className="text-xs text-[#a1a1aa] flex items-center gap-1 flex-shrink-0">
-                      <Calendar className="w-3 h-3" />
-                      {new Date(a.created_at).toLocaleDateString()}
-                    </span>
+            <Reveal key={a.id} delay={idx * 80}>
+              <div
+                data-testid={`announcement-card-${a.id}`}
+                className="rounded-2xl border border-[#27272a] bg-[#18181b] p-6 hover:border-[#00f0ff]/40 transition-colors"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-[#00f0ff]/15 border border-[#00f0ff]/30 flex items-center justify-center flex-shrink-0">
+                    <Bell className="w-5 h-5 text-[#00f0ff]" />
                   </div>
-                  <p className="text-[#a1a1aa] leading-relaxed">{a.content}</p>
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between mb-2 gap-4 flex-wrap">
+                      <h3 className="text-lg font-semibold">{a.title}</h3>
+                      <span className="text-xs text-[#a1a1aa] flex items-center gap-1 flex-shrink-0">
+                        <Calendar className="w-3 h-3" />
+                        {new Date(a.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="text-[#a1a1aa] leading-relaxed">{a.content}</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            </Reveal>
           ))}
         </div>
       )}

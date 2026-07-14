@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { tests } from '../lib/api';
-import { CheckCircle2, XCircle, ArrowLeft, Trophy, Target, Sparkles } from 'lucide-react';
+import { CheckCircle2, XCircle, ArrowLeft, Trophy, Target, Sparkles, Medal, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import Logo from '../components/Logo';
+import { Reveal } from '../hooks/useReveal';
 
 const TestReview = () => {
   const { testId } = useParams();
@@ -77,11 +78,11 @@ const TestReview = () => {
               <Trophy className="w-6 h-6" style={{ color: scoreColor }} />
               <div className="text-sm uppercase tracking-wider font-mono text-[#a1a1aa]">Test Review</div>
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-6" data-testid="review-test-title">
+            <h1 className="font-display text-3xl md:text-5xl font-bold tracking-tight mb-6" data-testid="review-test-title">
               {review.test_title}
             </h1>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
               <div className="bg-[#09090b]/60 border border-[#27272a] rounded-xl p-4">
                 <div className="text-xs text-[#a1a1aa] uppercase tracking-wider mb-1">Score</div>
                 <div className="text-2xl font-bold font-mono">{review.score}<span className="text-[#a1a1aa] text-lg">/{review.total_marks}</span></div>
@@ -89,6 +90,27 @@ const TestReview = () => {
               <div className="bg-[#09090b]/60 border border-[#27272a] rounded-xl p-4">
                 <div className="text-xs text-[#a1a1aa] uppercase tracking-wider mb-1">Percentage</div>
                 <div className="text-2xl font-bold font-mono" style={{ color: scoreColor }}>{percentage}%</div>
+              </div>
+              <div className="bg-[#09090b]/60 border border-[#27272a] rounded-xl p-4" data-testid="review-rank">
+                <div className="text-xs text-[#a1a1aa] uppercase tracking-wider mb-1 flex items-center gap-1">
+                  <Medal className="w-3 h-3 text-[#ffbb00]" />
+                  Rank
+                </div>
+                <div className="text-2xl font-bold font-mono">
+                  {review.rank ? (
+                    <>
+                      <span className={review.rank <= 3 ? 'medal-shine' : ''}>#{review.rank}</span>
+                      <span className="text-[#a1a1aa] text-sm">/{review.total_participants}</span>
+                    </>
+                  ) : '—'}
+                </div>
+              </div>
+              <div className="bg-[#09090b]/60 border border-[#27272a] rounded-xl p-4" data-testid="review-percentile">
+                <div className="text-xs text-[#a1a1aa] uppercase tracking-wider mb-1 flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3 text-[#7c3aed]" />
+                  Percentile
+                </div>
+                <div className="text-2xl font-bold font-mono text-[#7c3aed]">{review.percentile}%</div>
               </div>
               <div className="bg-[#09090b]/60 border border-[#27272a] rounded-xl p-4">
                 <div className="text-xs text-[#a1a1aa] uppercase tracking-wider mb-1 flex items-center gap-1">
@@ -116,13 +138,13 @@ const TestReview = () => {
         {/* Questions */}
         <div className="space-y-4">
           {review.questions.map((q, idx) => (
-            <div
-              key={idx}
-              data-testid={`review-question-${idx}`}
-              className={`bg-[#18181b] border rounded-xl p-6 ${
-                q.is_correct ? 'border-[#00ff66]/30' : 'border-[#ff003c]/30'
-              }`}
-            >
+            <Reveal key={idx} delay={idx * 60}>
+              <div
+                data-testid={`review-question-${idx}`}
+                className={`bg-[#18181b] border rounded-xl p-6 ${
+                  q.is_correct ? 'border-[#00ff66]/30' : 'border-[#ff003c]/30'
+                }`}
+              >
               <div className="flex items-start gap-4 mb-4">
                 <div
                   className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-mono ${
@@ -192,6 +214,7 @@ const TestReview = () => {
                 })}
               </div>
             </div>
+            </Reveal>
           ))}
         </div>
       </main>

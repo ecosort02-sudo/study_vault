@@ -46,6 +46,7 @@ export const admin = {
   unpublishTest: (id) => api.post(`/admin/tests/${id}/unpublish`),
   publishAllTests: () => api.post('/admin/tests/publish-all'),
   unpublishAllTests: () => api.post('/admin/tests/unpublish-all'),
+  deleteTest: (id) => api.delete(`/admin/tests/${id}`),
   createAssignment: (data) => api.post('/admin/assignments', data),
   getAllAssignments: () => api.get('/admin/assignments'),
   createAnnouncement: (data) => api.post('/admin/announcements', data),
