@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import StudentDashboard from './pages/StudentDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import TestPage from './pages/TestPage';
+import TestReview from './pages/TestReview';
 import './App.css';
 
 const ProtectedRoute = ({ children, requireRole }) => {
@@ -66,6 +67,14 @@ function AppContent() {
         element={
           <ProtectedRoute requireRole="student">
             <TestPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/test/:testId/review"
+        element={
+          <ProtectedRoute requireRole="student">
+            <TestReview />
           </ProtectedRoute>
         }
       />

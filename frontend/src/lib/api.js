@@ -23,6 +23,7 @@ export const tests = {
   getAll: () => api.get('/tests'),
   getById: (id) => api.get(`/tests/${id}`),
   submit: (data) => api.post('/tests/submit', data),
+  review: (id) => api.get(`/tests/${id}/review`),
 };
 
 export const assignments = {
@@ -43,6 +44,8 @@ export const admin = {
   getAllTests: () => api.get('/admin/tests'),
   publishTest: (id) => api.post(`/admin/tests/${id}/publish`),
   unpublishTest: (id) => api.post(`/admin/tests/${id}/unpublish`),
+  publishAllTests: () => api.post('/admin/tests/publish-all'),
+  unpublishAllTests: () => api.post('/admin/tests/unpublish-all'),
   createAssignment: (data) => api.post('/admin/assignments', data),
   getAllAssignments: () => api.get('/admin/assignments'),
   createAnnouncement: (data) => api.post('/admin/announcements', data),
@@ -50,6 +53,7 @@ export const admin = {
   getStats: () => api.get('/admin/stats'),
   createUser: (data) => api.post('/admin/users', data),
   listUsers: () => api.get('/admin/users'),
+  updateUser: (id, data) => api.patch(`/admin/users/${id}`, data),
 };
 
 export default api;

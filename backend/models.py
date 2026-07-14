@@ -15,6 +15,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=False)
     role = Column(String(20), nullable=False, index=True)  # 'student' or 'admin'
+    is_active = Column(Boolean, default=True, index=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     
     # Relationships

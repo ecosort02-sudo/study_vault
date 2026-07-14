@@ -16,6 +16,9 @@ import {
   Eye,
   EyeOff,
   UserPlus,
+  Pencil,
+  UserX,
+  UserCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Logo from '../components/Logo';
@@ -34,6 +37,7 @@ const AdminDashboard = () => {
   const [showCreateAssignment, setShowCreateAssignment] = useState(false);
   const [showCreateAnnouncement, setShowCreateAnnouncement] = useState(false);
   const [showCreateUser, setShowCreateUser] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -225,16 +229,46 @@ const AdminDashboard = () => {
 
             {activeTab === 'tests' && (
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-3">
                   <h2 className="text-2xl font-bold">Manage Tests</h2>
-                  <button
-                    onClick={() => setShowCreateTest(true)}
-                    data-testid="create-test-button"
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#00f0ff] to-[#7c3aed] text-white font-semibold rounded-md hover:shadow-lg transition-all"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Create Test
-                  </button>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await admin.publishAllTests();
+                          toast.success(res.data.message);
+                          loadData();
+                        } catch (e) { toast.error('Failed'); }
+                      }}
+                      data-testid="publish-all-tests-button"
+                      className="flex items-center gap-2 px-4 py-2 border border-[#00ff66]/40 text-[#00ff66] hover:bg-[#00ff66]/10 rounded-md text-sm font-semibold transition-colors"
+                    >
+                      <Eye className="w-4 h-4" />
+                      Publish All Results
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await admin.unpublishAllTests();
+                          toast.success(res.data.message);
+                          loadData();
+                        } catch (e) { toast.error('Failed'); }
+                      }}
+                      data-testid="unpublish-all-tests-button"
+                      className="flex items-center gap-2 px-4 py-2 border border-[#27272a] text-[#a1a1aa] hover:border-[#a1a1aa] rounded-md text-sm font-semibold transition-colors"
+                    >
+                      <EyeOff className="w-4 h-4" />
+                      Unpublish All
+                    </button>
+                    <button
+                      onClick={() => setShowCreateTest(true)}
+                      data-testid="create-test-button"
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#00f0ff] to-[#7c3aed] text-white font-semibold rounded-md hover:shadow-lg transition-all"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Create Test
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -390,7 +424,9 @@ const AdminDashboard = () => {
                           <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase">Name</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase">Email</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase">Role</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase">Status</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-[#a1a1aa] uppercase">Joined</th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-[#a1a1aa] uppercase">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#27272a]">
@@ -409,8 +445,53 @@ const AdminDashboard = () => {
                                 {u.role}
                               </span>
                             </td>
+                            <td className="px-6 py-4">
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs ${
+                                  u.is_active
+                                    ? 'bg-[#00ff66]/20 text-[#00ff66]'
+                                    : 'bg-[#ff003c]/20 text-[#ff003c]'
+                                }`}
+                              >
+                                {u.is_active ? 'Active' : 'Deactivated'}
+                              </span>
+                            </td>
                             <td className="px-6 py-4 text-sm text-[#a1a1aa]">
                               {new Date(u.created_at).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <div className="flex items-center gap-2 justify-end">
+                                <button
+                                  onClick={() => setEditingUser(u)}
+                                  data-testid={`edit-user-${u.id}`}
+                                  className="p-2 hover:bg-[#00f0ff]/10 text-[#00f0ff] rounded-md transition-colors"
+                                  title="Edit user"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                                {u.id !== user.id && (
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        await admin.updateUser(u.id, { is_active: !u.is_active });
+                                        toast.success(u.is_active ? 'User deactivated' : 'User activated');
+                                        loadData();
+                                      } catch (e) {
+                                        toast.error(e.response?.data?.detail || 'Failed to update user');
+                                      }
+                                    }}
+                                    data-testid={`toggle-user-${u.id}`}
+                                    className={`p-2 rounded-md transition-colors ${
+                                      u.is_active
+                                        ? 'hover:bg-[#ff003c]/10 text-[#ff003c]'
+                                        : 'hover:bg-[#00ff66]/10 text-[#00ff66]'
+                                    }`}
+                                    title={u.is_active ? 'Deactivate' : 'Activate'}
+                                  >
+                                    {u.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -496,6 +577,123 @@ const AdminDashboard = () => {
       {showCreateUser && (
         <CreateUserModal onClose={() => setShowCreateUser(false)} onSuccess={loadData} />
       )}
+      {editingUser && (
+        <EditUserModal
+          user={editingUser}
+          onClose={() => setEditingUser(null)}
+          onSuccess={() => { loadData(); setEditingUser(null); }}
+        />
+      )}
+    </div>
+  );
+};
+
+// Edit User Modal
+const EditUserModal = ({ user, onClose, onSuccess }) => {
+  const [fullName, setFullName] = useState(user.full_name);
+  const [email, setEmail] = useState(user.email);
+  const [role, setRole] = useState(user.role);
+  const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const payload = { full_name: fullName, email, role };
+      if (password) payload.password = password;
+      await admin.updateUser(user.id, payload);
+      toast.success('User updated successfully');
+      onSuccess();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to update');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="bg-[#18181b] border border-[#27272a] rounded-lg max-w-lg w-full">
+        <div className="border-b border-[#27272a] p-6 flex items-center justify-between">
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <Pencil className="w-6 h-6 text-[#00f0ff]" />
+            Edit User
+          </h2>
+          <button onClick={onClose} className="text-[#a1a1aa] hover:text-white">✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Full Name</label>
+            <input
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+              data-testid="edit-user-fullname"
+              className="w-full px-4 py-2 bg-[#09090b] border border-[#27272a] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#00f0ff]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              data-testid="edit-user-email"
+              className="w-full px-4 py-2 bg-[#09090b] border border-[#27272a] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#00f0ff]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Role</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              data-testid="edit-user-role"
+              className="w-full px-4 py-2 bg-[#09090b] border border-[#27272a] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#00f0ff]"
+            >
+              <option value="student">Student</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              New Password <span className="text-xs text-[#a1a1aa]">(leave blank to keep current)</span>
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              data-testid="edit-user-password"
+              placeholder="••••••••"
+              className="w-full px-4 py-2 bg-[#09090b] border border-[#27272a] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#00f0ff]"
+            />
+          </div>
+
+          <div className="flex gap-4 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2 border border-[#27272a] rounded-md hover:border-[#00f0ff] transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              data-testid="save-edit-user"
+              className="flex-1 py-2 bg-gradient-to-r from-[#00f0ff] to-[#7c3aed] text-white font-semibold rounded-md disabled:opacity-50"
+            >
+              {submitting ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

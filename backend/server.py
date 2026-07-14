@@ -47,6 +47,13 @@ class TokenResponse(BaseModel):
     access_token: str
     user: UserResponse
 
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    role: Optional[str] = None
+    password: Optional[str] = None
+    is_active: Optional[bool] = None
+
 class TestCreate(BaseModel):
     title: str
     description: Optional[str] = None
@@ -83,6 +90,7 @@ class TestListResponse(BaseModel):
     results_published: bool
     created_at: datetime
     already_attempted: bool = False
+    my_score: Optional[int] = None
 
 class TestSubmissionCreate(BaseModel):
     test_id: str
@@ -159,7 +167,25 @@ class UserListResponse(BaseModel):
     email: str
     full_name: str
     role: str
+    is_active: bool
     created_at: datetime
+
+class TestReviewQuestion(BaseModel):
+    question: str
+    options: List[str]
+    correct_option: int
+    selected_option: Optional[int] = None
+    is_correct: bool
+    marks: int
+
+class TestReviewResponse(BaseModel):
+    test_id: str
+    test_title: str
+    score: int
+    total_marks: int
+    submitted_at: datetime
+    results_published: bool
+    questions: List[TestReviewQuestion]
 
 # ---------------- Helpers ----------------
 def hash_password(password: str) -> str:
@@ -222,6 +248,9 @@ async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
     if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account is deactivated. Contact your administrator.")
+    
     token = create_jwt_token(user.id, user.email, user.role)
     return TokenResponse(access_token=token, user=UserResponse.model_validate(user))
 
@@ -243,24 +272,72 @@ async def get_tests(user: User = Depends(get_current_user), db: AsyncSession = D
     )
     tests = result.scalars().all()
     
-    # Fetch which of these tests the user has already submitted
+    # Fetch which of these tests the user has already submitted and their scores
     if not tests:
         return []
     test_ids = [t.id for t in tests]
     subs_result = await db.execute(
-        select(TestSubmission.test_id).where(
+        select(TestSubmission.test_id, TestSubmission.score).where(
             TestSubmission.user_id == user.id,
             TestSubmission.test_id.in_(test_ids)
         )
     )
-    attempted_ids = {row[0] for row in subs_result.all()}
+    attempted_map = {row[0]: row[1] for row in subs_result.all()}
     
     response = []
     for test in tests:
         item = TestListResponse.model_validate(test)
-        item.already_attempted = test.id in attempted_ids
+        item.already_attempted = test.id in attempted_map
+        # Only reveal score if results are published
+        if item.already_attempted and test.results_published:
+            item.my_score = attempted_map[test.id]
         response.append(item)
     return response
+
+
+@api_router.get("/tests/{test_id}/review", response_model=TestReviewResponse)
+async def review_test(test_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Return student's submission with correct answers highlighted (only after results published)."""
+    result = await db.execute(select(Test).where(Test.id == test_id))
+    test = result.scalar_one_or_none()
+    if not test:
+        raise HTTPException(status_code=404, detail="Test not found")
+    
+    if not test.results_published:
+        raise HTTPException(status_code=403, detail="Results are not yet published")
+    
+    sub_result = await db.execute(
+        select(TestSubmission).where(
+            TestSubmission.test_id == test_id,
+            TestSubmission.user_id == user.id
+        )
+    )
+    submission = sub_result.scalar_one_or_none()
+    if not submission:
+        raise HTTPException(status_code=404, detail="You have not attempted this test")
+    
+    review_questions = []
+    for i, q in enumerate(test.questions):
+        selected = submission.answers[i].get('selected_option') if i < len(submission.answers) else None
+        is_correct = selected == q.get('correct_option')
+        review_questions.append(TestReviewQuestion(
+            question=q['question'],
+            options=q['options'],
+            correct_option=q['correct_option'],
+            selected_option=selected,
+            is_correct=is_correct,
+            marks=q.get('marks', 1),
+        ))
+    
+    return TestReviewResponse(
+        test_id=test.id,
+        test_title=test.title,
+        score=submission.score,
+        total_marks=test.total_marks,
+        submitted_at=submission.submitted_at,
+        results_published=test.results_published,
+        questions=review_questions,
+    )
 
 @api_router.get("/tests/{test_id}", response_model=TestResponse)
 async def get_test(test_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
@@ -450,6 +527,37 @@ async def list_users(admin_user: User = Depends(require_admin), db: AsyncSession
     result = await db.execute(select(User).order_by(desc(User.created_at)))
     return [UserListResponse.model_validate(u) for u in result.scalars().all()]
 
+@api_router.patch("/admin/users/{user_id}", response_model=UserListResponse)
+async def update_user(user_id: str, data: UserUpdate, admin_user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.id == user_id))
+    target = result.scalar_one_or_none()
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if data.full_name is not None:
+        target.full_name = data.full_name
+    if data.email is not None:
+        # Check email uniqueness
+        existing_result = await db.execute(select(User).where(User.email == data.email, User.id != user_id))
+        if existing_result.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Email already in use")
+        target.email = data.email
+    if data.role is not None:
+        if data.role not in ['student', 'admin']:
+            raise HTTPException(status_code=400, detail="Invalid role")
+        target.role = data.role
+    if data.password:
+        target.password_hash = hash_password(data.password)
+    if data.is_active is not None:
+        # Prevent admin from deactivating themselves
+        if target.id == admin_user.id and data.is_active == False:
+            raise HTTPException(status_code=400, detail="You cannot deactivate your own account")
+        target.is_active = data.is_active
+    
+    await db.commit()
+    await db.refresh(target)
+    return UserListResponse.model_validate(target)
+
 # ---------------- Admin Routes - Tests ----------------
 @api_router.post("/admin/tests", response_model=TestResponse)
 async def create_test(data: TestCreate, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
@@ -484,6 +592,38 @@ async def publish_test_results(test_id: str, user: User = Depends(require_admin)
     
     await db.commit()
     return {"success": True, "message": "Results published"}
+
+@api_router.post("/admin/tests/publish-all")
+async def publish_all_test_results(user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    tests_result = await db.execute(select(Test).where(Test.results_published == False))
+    tests = tests_result.scalars().all()
+    count = 0
+    for t in tests:
+        t.results_published = True
+        count += 1
+    
+    grades_result = await db.execute(select(Grade).where(Grade.is_published == False))
+    for g in grades_result.scalars().all():
+        g.is_published = True
+    
+    await db.commit()
+    return {"success": True, "message": f"Published results for {count} tests"}
+
+@api_router.post("/admin/tests/unpublish-all")
+async def unpublish_all_test_results(user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    tests_result = await db.execute(select(Test).where(Test.results_published == True))
+    tests = tests_result.scalars().all()
+    count = 0
+    for t in tests:
+        t.results_published = False
+        count += 1
+    
+    grades_result = await db.execute(select(Grade).where(Grade.is_published == True))
+    for g in grades_result.scalars().all():
+        g.is_published = False
+    
+    await db.commit()
+    return {"success": True, "message": f"Unpublished results for {count} tests"}
 
 @api_router.post("/admin/tests/{test_id}/unpublish")
 async def unpublish_test_results(test_id: str, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
